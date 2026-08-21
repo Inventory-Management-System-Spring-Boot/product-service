@@ -21,6 +21,22 @@ updates:
           - "org.springframework.cloud*"
     labels:
       - dependencies
+    ignore:
+      # Do not propose MAJOR Spring upgrades.
+      #
+      # This rule was written in response to a real failure: Dependabot's first run opened a
+      # PR bumping Spring Boot 3.5.15 -> 4.1.0, and CI failed. Boot 4 renamed the starters
+      # (spring-boot-starter-web became spring-boot-starter-webmvc) and, at the time of
+      # writing, no Spring Cloud release train targets it - so the upgrade breaks the build
+      # here and would break Eureka and Gateway from Phase 4 onward.
+      #
+      # A major Spring upgrade is a coordinated migration across every service in the
+      # system, not a routine dependency bump. Patch and minor updates still flow through
+      # automatically, which is where the security fixes are.
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "org.springframework.cloud:*"
+        update-types: ["version-update:semver-major"]
 
   # Keeps the GitHub Actions in ci.yml current too — pinned action versions go stale and
   # eventually stop receiving security fixes.
