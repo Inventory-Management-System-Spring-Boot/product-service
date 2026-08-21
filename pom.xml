@@ -46,42 +46,6 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- Phase 1: Spring Data JPA. Brings Hibernate (the JPA implementation), the
-		     transaction manager, and HikariCP (the connection pool). Adding this is what
-		     makes Spring Boot start looking for a DataSource at startup. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-
-		<!-- Phase 1: Bean Validation (Jakarta Validation + Hibernate Validator). Without
-		     this on the classpath, @Valid and @NotBlank are silently ignored - a very common
-		     "why isn't my validation running?" bug. -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-validation</artifactId>
-		</dependency>
-
-		<!-- Phase 1: Flyway owns the database schema. It runs the versioned SQL scripts in
-		     src/main/resources/db/migration on startup. Since Flyway 10, the Postgres
-		     support lives in its own module, so both artifacts are required. -->
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-core</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-database-postgresql</artifactId>
-		</dependency>
-
-		<!-- Phase 1: the JDBC driver. "runtime" scope because our code never imports it -
-		     Hibernate loads it reflectively from the JDBC URL. -->
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-
 		<!-- Compile-time code generation for getters/setters/constructors. "optional" means
 		     it is not passed on to anything that depends on this module. -->
 		<dependency>
@@ -98,15 +62,18 @@
 		</dependency>
 
 		<!--
-		  Deliberately NOT here yet (see docs/ROADMAP.md):
+		  YOU ADD THESE IN THE PHASE 1 LAB, STEP 1:
+		    spring-boot-starter-data-jpa
+		    spring-boot-starter-validation
+		    flyway-core
+		    flyway-database-postgresql
+		    postgresql            (scope: runtime)
+
+		  Later phases:
 		    Phase 4  spring-cloud-starter-netflix-eureka-client
 		    Phase 7  spring-cloud-starter-circuitbreaker-resilience4j
 		    Phase 8  spring-boot-starter-amqp
 		    Phase 9  micrometer-tracing-bridge-brave, zipkin-reporter-brave
-
-		  Adding data-jpa before there is a database is how you get
-		  "Failed to configure a DataSource" on your very first run. Every dependency should
-		  answer a problem you have already hit.
 		-->
 	</dependencies>
 
