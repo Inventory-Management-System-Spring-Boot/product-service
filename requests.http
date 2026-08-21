@@ -1,0 +1,113 @@
+### product-service API — Phase 1
+#
+# Runnable from IntelliJ (built in) or VS Code with the REST Client extension: click
+# "Send Request" above any block. Equivalent curl commands are in docs/PHASE-1.md.
+#
+# Prerequisites:
+#   docker compose up -d          from the repository root, starts product-db
+#   ./mvnw spring-boot:run        from product-service/
+
+@host = http://localhost:8081
+
+### Liveness — no database involved
+GET {{host}}/api/products/ping
+
+### Health — note the "db" component, which runs a real query against Postgres
+GET {{host}}/actuator/health
+
+### List all products (the 5 rows seeded by V2__seed_products.sql)
+GET {{host}}/api/products
+
+### Get one by internal id
+GET {{host}}/api/products/1
+
+### Get one by SKU — the lookup other services will use from Phase 3
+GET {{host}}/api/products/sku/IPHONE-15
+
+### Create a product → expect 201 and a Location header
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "sku": "GALAXY-S25",
+  "name": "Samsung Galaxy S25",
+  "description": "Android smartphone, 256GB",
+  "price": 74999.00
+}
+
+### Update it → PUT replaces the mutable fields wholesale
+PUT {{host}}/api/products/6
+Content-Type: application/json
+
+{
+  "sku": "GALAXY-S25",
+  "name": "Samsung Galaxy S25 Ultra",
+  "description": "Android smartphone, 512GB",
+  "price": 109999.00
+}
+
+### Delete it → expect 204 No Content
+DELETE {{host}}/api/products/6
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Failure cases. These are the interesting ones — run every single one and
+#  read the response body. Knowing what your API does when things go wrong is
+#  worth more than knowing what it does when they go right.
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 404 — no such id
+GET {{host}}/api/products/9999
+
+### 404 — no such SKU
+GET {{host}}/api/products/sku/DOES-NOT-EXIST
+
+### 400 — id is not a number, so binding fails before the controller runs
+GET {{host}}/api/products/abc
+
+### 400 — three constraint violations at once, reported per field
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "sku": "lowercase-not-allowed",
+  "name": "   ",
+  "price": -100.00
+}
+
+### 400 — price has more decimal places than NUMERIC(12,2) can hold
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "sku": "TOO-PRECISE",
+  "name": "Overly precise product",
+  "price": 12.3456
+}
+
+### 400 — required fields missing entirely
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "description": "no sku, no name, no price"
+}
+
+### 400 — malformed JSON
+POST {{host}}/api/products
+Content-Type: application/json
+
+{ not actually json
+
+### 409 — SKU already exists (run twice: first 201, then 409)
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "sku": "CONFLICT-TEST",
+  "name": "Conflict test",
+  "price": 100.00
+}
+
+### 404 — deleting something that is not there is honest about it
+DELETE {{host}}/api/products/9999

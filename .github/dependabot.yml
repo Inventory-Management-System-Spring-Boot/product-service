@@ -1,0 +1,32 @@
+# Dependabot opens PRs when dependencies fall behind.
+#
+# This matters more in a polyrepo than a monorepo: with seven repos each pinning Spring Boot
+# independently, versions drift apart silently. Dependabot makes that drift visible as a PR
+# instead of something you discover during an incident.
+
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Group the Spring dependencies into one PR. They are released as a tested-together set,
+    # so reviewing them individually is both noisier and less safe.
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "org.springframework.boot*"
+          - "org.springframework.cloud*"
+    labels:
+      - dependencies
+
+  # Keeps the GitHub Actions in ci.yml current too — pinned action versions go stale and
+  # eventually stop receiving security fixes.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels:
+      - ci

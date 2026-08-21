@@ -1,0 +1,93 @@
+spring:
+  application:
+    # This name is the service's identity. From Phase 4 onward it is also the key other
+    # services use to find this one via Eureka - they will call http://product-service/...
+    # rather than an IP. Get it wrong and discovery silently fails.
+    name: product-service
+
+  datasource:
+    # localhost works in Phase 1 because the app runs on your Mac and only the DATABASE is
+    # in a container, reachable through the port published in docker-compose.yml.
+    #
+    # In Phase 2 the app moves into a container too, and this exact line stops working -
+    # inside a container, localhost means that container, not your Mac. It becomes
+    # jdbc:postgresql://product-db:5432/product_db, injected as an environment variable so
+    # this file never has to know which environment it is in.
+    url: jdbc:postgresql://localhost:5432/product_db
+    username: product_user
+    password: product_pass
+
+    # Credentials in a file committed to git are fine for a local throwaway database and
+    # unacceptable for anything real. Phase 6 moves them out to the config server, Phase 10
+    # to a proper secret store. Noting it here so it never becomes a habit.
+
+    hikari:
+      # Hikari is the connection pool Spring Boot uses by default. Opening a TCP connection
+      # and authenticating costs milliseconds, so the pool keeps a few open and hands them
+      # out. Ten is generous for one service; the useful rule is that a pool should be
+      # sized to your database's capacity divided by the number of instances, not to your
+      # hopes for throughput.
+      maximum-pool-size: 10
+      # Fail fast if no connection is available rather than blocking a request thread for
+      # 30 seconds. The same fail-fast instinct behind circuit breakers in Phase 7.
+      connection-timeout: 5000
+
+  jpa:
+    hibernate:
+      # THE important line in this file.
+      #
+      # `validate` tells Hibernate to compare its entity mappings against the live schema at
+      # startup and refuse to start if they disagree. It never modifies anything - Flyway
+      # owns the schema.
+      #
+      # The tempting alternative, ddl-auto: update, lets Hibernate alter tables to match your
+      # entities. It is a trap: it never drops or renames anything, so schemas silently drift
+      # apart between environments, and there is no record of what changed or any way to roll
+      # it back. `validate` + Flyway means the schema is reviewable, versioned code.
+      ddl-auto: validate
+
+    # Log the SQL Hibernate generates. Genuinely worth leaving on while learning - it is how
+    # you SEE that mutating a managed entity produces an UPDATE with no save() call, and how
+    # you catch the N+1 query problem (one query for a list, then one per row) the first time
+    # you add a relation. Turn it off in production; it is noisy and slow.
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    # Where the versioned migrations live. This is the default; stated explicitly because
+    # Phase 6 will override it per profile.
+    locations: classpath:db/migration
+    # Refuse to run against a non-empty database that has no flyway_schema_history table.
+    # It is a guard against pointing Flyway at a database somebody else already manages.
+    baseline-on-migrate: false
+
+server:
+  # NOTE: the space after the colon is mandatory. `port:8081` is not a key/value pair -
+  # YAML reads it as the plain string "port:8081", so `server` becomes a string, the port
+  # setting is never applied, and the app quietly starts on the default 8080 instead.
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only what we need for now. Docker health checks use /actuator/health from Phase 2.
+        include: health,info
+  endpoint:
+    health:
+      # Show which individual components are up/down, not just an overall "UP". With JPA on
+      # the classpath, /actuator/health now includes a `db` component that runs a real
+      # validation query - so it reports on the database, not just on this process. That
+      # distinction is exactly what Docker's healthcheck needs in Phase 2.
+      show-details: always
+
+logging:
+  level:
+    com.inventory: DEBUG
+    # Show the values bound into SQL parameters. Without this, show-sql prints `values (?, ?)`
+    # and you cannot tell what was actually sent. Never enable in production - it writes
+    # user data straight into your logs.
+    org.hibernate.orm.jdbc.bind: TRACE
